@@ -1,0 +1,45 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: academiapp
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - "8989:80"
+    networks:
+      - laravel_network
+    user: "33:33"           # www-data
+    group_add:
+      - "33"                # garante que o grupo www-data exista
+
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: Mcde1234@
+    volumes:
+      - dbdata:/var/lib/mysql
+    ports:
+      - "3309:3306"
+    networks:
+      - laravel_network
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - laravel_network
+
+networks:
+  laravel_network:
+
+volumes:
+  dbdata:
