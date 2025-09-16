@@ -15,6 +15,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
 
 class UserResource extends Resource
 {
@@ -54,6 +55,7 @@ class UserResource extends Resource
                         'administrador' => 'Administrador',
                         'gerente' => 'Gerente',
                         'funcionario' => 'Funcionário',
+                        'atendente' => 'atendente',
                     ])
                     ->required(),
 
@@ -81,7 +83,8 @@ class UserResource extends Resource
                     ->colors([
                         'info' => 'gerente',
                         'warning' => 'funcionario',
-                        'success' => 'administrador'
+                        'success' => 'administrador',
+                        'primary' => 'atendente'
                     ])
                     ->sortable(),
 
@@ -93,7 +96,6 @@ class UserResource extends Resource
                             ->locale('pt_BR')
                             ->isoFormat('dddd, DD/MM/YYYY HH:mm')
                     )
-                    ->dateTime()
                     ->sortable(),
             ])
             ->actions([
@@ -141,6 +143,12 @@ class UserResource extends Resource
                                 return redirect(static::getUrl('index'));
                             }),
                     ]),
+
+
+                Action::make('estatisticas')
+                    ->label('Ver Estatísticas')
+                    ->icon('heroicon-o-chart-bar')
+                    ->url(fn(User $record) => UserResource::getUrl('estatisticas', ['record' => $record])),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
@@ -158,6 +166,8 @@ class UserResource extends Resource
             'index' => Pages\ListUsers::route('/'),
             'create' => Pages\CreateUser::route('/create'),
             // 'edit' => Pages\EditUser::route('/{record}/edit'),
+            'estatisticas' => Pages\EstatisticasUser::route('/{record}/estatisticas'),
+
         ];
     }
 }

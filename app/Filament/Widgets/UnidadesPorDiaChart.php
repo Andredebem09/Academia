@@ -15,7 +15,6 @@ class PostsPerWeek extends ChartWidget
 
     protected function getData(): array
     {
-        // Busca em uma só query a contagem por dia dos últimos 7 dias
         $startDate = Carbon::today()->subDays(6);
         $counts = Requisicoes::select(
                 DB::raw('DATE(created_at) as data'),
@@ -51,18 +50,34 @@ class PostsPerWeek extends ChartWidget
         ];
     }
 
-   public function getColumnSpan(): int|string|array
-{
-    return '2.0'; 
-}
+    public function getColumnSpan(): int|string|array
+    {
+        return 'full'; 
+    }
 
-protected function getContentHeight(): ?string
-{
-    return '400px'; 
-}
+    protected function getContentHeight(): ?string
+    {
+        return '250px'; 
+    }
 
     protected function getType(): string
     {
         return 'line';
+    }
+
+    // Adicionado: apenas números inteiros no eixo Y
+    protected function getOptions(): ?array
+    {
+        return [
+            'scales' => [
+                'y' => [
+                    'beginAtZero' => true,
+                    'ticks' => [
+                        'stepSize' => 1,
+                        'precision' => 0,
+                    ],
+                ],
+            ],
+        ];
     }
 }

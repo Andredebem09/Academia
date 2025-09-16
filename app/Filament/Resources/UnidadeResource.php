@@ -67,13 +67,12 @@ class UnidadeResource extends Resource
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
-                    ->tooltip(fn($record) => $record->created_at->diffForHumans())
+                   ->tooltip(fn($record) => $record->created_at->diffForHumans())
                     ->formatStateUsing(
                         fn($state) => Carbon::parse($state)
                             ->locale('pt_BR')
                             ->isoFormat('dddd, DD/MM/YYYY HH:mm')
                     )
-                    ->dateTime('d/m/Y H:i')
                     ->sortable(),
             ])
             ->filters([

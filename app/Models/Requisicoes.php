@@ -13,6 +13,9 @@ class Requisicoes extends Model
         'foto',
         'relato',
         'emergencial',
+        'status',
+        'nota_atendimento',
+        'gestor_id',
     ];
 
 
@@ -25,4 +28,10 @@ class Requisicoes extends Model
     {
         return $this->belongsTo(Academia::class);
     }
+
+    public function gestor()
+{
+    return $this->belongsTo(User::class, 'gestor_id');
+}
+
 }

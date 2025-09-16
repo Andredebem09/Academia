@@ -46,4 +46,11 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function mount($record): void
+{
+    $this->user = $record instanceof User
+        ? $record->load('requisicoes')
+        : User::with('requisicoes')->findOrFail($record);
+}
 }
