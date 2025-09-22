@@ -11,5 +11,16 @@ class Academia extends Model
         'address',
         'latitude',
         'longitude',
+        'cep',
+        'estado',
+        'cidade',
+        'bairro',
+        'rua',
     ];
+
+    public function users()
+{
+    return $this->belongsToMany(User::class, 'gestor_academia', 'academias_id', 'user_id');
+}
+
 }

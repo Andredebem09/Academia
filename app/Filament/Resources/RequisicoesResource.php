@@ -43,7 +43,8 @@ class RequisicoesResource extends Resource
                         'administrador',
                         'gerente',
                         'funcionario',
-                        'atendente'
+                        'atendente',
+                        'relator',
                     ])
                 )
                 ->schema([
@@ -70,11 +71,9 @@ class RequisicoesResource extends Resource
                     Select::make('user_id')
                         ->label('Atendente')
                         ->options(User::where('cargo', 'atendente')->pluck('name', 'id'))
+                        ->default(fn() => User::where('cargo', 'atendente')->inRandomOrder()->first()?->id)
                         ->required()
-                        ->disabled(fn() => in_array(
-                            Filament::auth()->user()?->cargo,
-                            ['atendente', 'gerente']
-                        )),
+                        ->hidden(),
 
                     Textarea::make('relato')
                         ->label('Relato do problema')
@@ -99,48 +98,56 @@ class RequisicoesResource extends Resource
                 ->columns(1)
                 ->columnSpanFull(),
 
-            // --- Seção para Atendimento (ATENDENTE pode editar) ---
+            // --- Seção para Atendimento ---
             Forms\Components\Section::make('Atendimento')
-                ->visible(fn() => in_array(
-                    Filament::auth()->user()?->cargo,
-                    ['atendente', 'gerente']
-                ))
+                ->visible(
+                    fn($record, $livewire) =>
+                    !($livewire instanceof Pages\CreateRequisicoes && Filament::auth()->user()?->cargo === 'administrador') &&
+                        in_array(Filament::auth()->user()?->cargo, ['atendente', 'gerente'])
+                )
                 ->schema([
                     Forms\Components\Grid::make(1)
                         ->schema([
                             Select::make('gestor_id')
                                 ->label('Encaminhar para Gerente')
-                                ->options(
-                                    User::where('cargo', 'gerente')->pluck('name', 'id')
-                                )
+                                ->options(User::where('cargo', 'gerente')->pluck('name', 'id'))
                                 ->searchable()
                                 ->required()
                                 ->placeholder('Selecione o gestor responsável')
-                                ->disabled(fn() => in_array(
-                                    Filament::auth()->user()?->cargo,
-                                    ['gerente']
-                                )),
+                                ->visible(
+                                    fn($record) =>
+                                    $record &&
+                                        Filament::auth()->user()?->cargo === 'atendente' &&
+                                        $record->status === 'atender'
+                                ),
 
                             Textarea::make('nota_atendimento')
                                 ->label('Nota do Atendimento')
                                 ->autosize()
-                                ->disabled(fn() => in_array(
-                                    Filament::auth()->user()?->cargo,
-                                    ['gerente']
-                                ))
-                                ->nullable(),
+                                ->nullable()
+                                ->visible(
+                                    fn($record) =>
+                                    $record &&
+                                        Filament::auth()->user()?->cargo === 'atendente' &&
+                                        $record->status === 'atendendo'
+                                ),
                         ]),
                 ]),
 
             // --- Seção para Aprovação do Gerente ---
             Forms\Components\Section::make('Aprovação do Gerente')
-                ->visible(fn() => Filament::auth()->user()?->cargo === 'gerente')
+                ->visible(
+                    fn($record, $livewire) =>
+                    !($livewire instanceof Pages\CreateRequisicoes && Filament::auth()->user()?->cargo === 'administrador') &&
+                        Filament::auth()->user()?->cargo === 'gerente'
+                )
                 ->schema([
                     Textarea::make('nota_aprovacao')
                         ->label('Observações do Gerente')
                         ->autosize()
                         ->nullable(),
                 ]),
+
         ]);
     }
 
@@ -175,15 +182,17 @@ class RequisicoesResource extends Resource
                     ->badge()
                     ->color(fn($record): string|array|null => match ($record->status) {
                         'pendente'    => Color::Gray,
-                        'atendimento' => Color::Yellow,
+                        'atendendo' => Color::Yellow,
                         'aprovacao'   => Color::Blue,
                         'concluido'   => Color::Green,
+                        'reprovado'    => Color::Red,
                     })
                     ->formatStateUsing(fn(string $state): string => match ($state) {
                         'pendente'    => 'Pendente',
-                        'atendimento' => 'Em Atendimento',
+                        'atendendo' => 'Em Atendimento',
                         'aprovacao'   => 'Aprovação',
                         'concluido'   => 'Concluído',
+                        'reprovado'   => 'Reprovado',
                     })
                     ->sortable()
                     ->searchable(),
@@ -209,110 +218,146 @@ class RequisicoesResource extends Resource
                     ->label('Status')
                     ->options([
                         'pendente'    => 'Pendente',
-                        'atendimento' => 'Em Atendimento',
+                        'atender'     => 'aguardando atendimento',
+                        'atendendo' => 'Em Atendimento',
                         'aprovacao'   => 'Aprovação',
                         'concluido'   => 'Concluído',
+                        'reprovado'   => 'Reprovado',
                     ]),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make()
-                    ->label(fn() => Filament::auth()->user()?->cargo === 'atendente'
-                        ? 'Atender'
-                        : 'Detalhes')
-                    ->icon(fn() => Filament::auth()->user()?->cargo === 'atendente'
-                        ? 'heroicon-o-clipboard-document-check'
-                        : 'heroicon-o-document-text')
-                    ->modalHeading(fn() => Filament::auth()->user()?->cargo === 'atendente'
-                        ? 'Atender Requisição'
-                        : 'Visualizar Requisição')
-                    ->slideOver()
-                    ->color('primary')
-                    ->extraModalFooterActions([
-                        Tables\Actions\EditAction::make()
-                            ->label(function () {
-                                return match (Filament::auth()->user()?->cargo) {
-                                    'atendente' => 'Atender',
-                                    'gerente'   => 'Aprovação',
-                                    default     => 'Editar',
-                                };
-                            })
-                            ->icon(function () {
-                                return match (Filament::auth()->user()?->cargo) {
-                                    'atendente' => 'heroicon-o-clipboard-document-check',
-                                    'gerente'   => 'heroicon-o-check-circle',
-                                    default     => 'heroicon-o-pencil-square',
-                                };
-                            })
-                            ->color(function () {
-                                return match (Filament::auth()->user()?->cargo) {
-                                    'atendente' => 'info',
-                                    'gerente'   => 'success',
-                                    default     => 'info',
-                                };
-                            })
-                            ->disabled(fn($record) => match (Filament::auth()->user()?->cargo) {
-                                'atendente' => $record->status !== 'pendente',
-                                'gerente'   => $record->status !== 'atendimento',
-                                default     => false,
-                            })
-                            ->slideOver()
-                            ->modalHeading(fn() => match (Filament::auth()->user()?->cargo) {
-                                'gerente'   => 'Aprovar Requisição',
-                                'atendente' => 'Atender Requisição',
-                                default     => 'Editar Requisição',
-                            })
-                            ->modalSubmitActionLabel(fn() => match (Filament::auth()->user()?->cargo) {
-                                'gerente'   => 'Aprovar',
-                                'atendente' => 'Concluir Atendimento',
-                                default     => 'Salvar',
-                            })
-                            ->after(function ($record, $livewire) {
-                                $user = Filament::auth()->user();
+        Tables\Actions\ViewAction::make()
+        ->label(fn() => match (Filament::auth()->user()?->cargo) {
+            'atendente' => 'Atender',
+            'gerente'   => 'Aprovação',
+            default     => 'Detalhes',
+        })
+        ->icon(fn() => match (Filament::auth()->user()?->cargo) {
+            'atendente' => 'heroicon-o-clipboard-document-check',
+            'gerente'   => 'heroicon-o-check-circle',
+            default     => 'heroicon-o-document-text',
+        })
+        ->modalHeading(fn() => match (Filament::auth()->user()?->cargo) {
+            'atendente' => 'Atender Requisição',
+            'gerente'   => 'Aprovar/Reprovar Requisição',
+            default     => 'Visualizar Requisição',
+        })
+        ->slideOver()
+        ->color('primary')
+        ->extraModalFooterActions([
+            Tables\Actions\EditAction::make()
+                ->label(fn() => match (Filament::auth()->user()?->cargo) {
+                    'atendente' => 'Atender',
+                    'gerente'   => 'Aprovar',
+                    default     => 'Editar',
+                })
+                ->icon(fn() => match (Filament::auth()->user()?->cargo) {
+                    'atendente' => 'heroicon-o-clipboard-document-check',
+                    'gerente'   => 'heroicon-o-check-circle',
+                    default     => 'heroicon-o-pencil-square',
+                })
+                ->color(fn() => match (Filament::auth()->user()?->cargo) {
+                    'atendente' => 'info',
+                    'gerente'   => 'success',
+                    default     => 'info',
+                })
+                ->slideOver()
+                ->modalHeading(fn() => match (Filament::auth()->user()?->cargo) {
+                    'atendente' => 'Atender Requisição',
+                    'gerente'   => 'Aprovar/Reprovar Requisição',
+                    default     => 'Editar Requisição',
+                })
+                ->modalSubmitActionLabel(fn($record) => match (Filament::auth()->user()?->cargo) {
+                    'atendente' => match ($record->status) {
+                        'pendente'  => 'Iniciar Atendimento',
+                        'atendendo' => 'Concluir Atendimento',
+                        default     => 'Salvar',
+                    },
+                    'gerente' => 'Aprovar',
+                    default   => 'Salvar',
+                })
+                ->after(function ($record, $livewire) {
+                    $user = Filament::auth()->user();
 
-                                if ($user?->cargo === 'atendente') {
-                                    $record->update(['status' => 'atendimento']);
-                                } elseif ($user?->cargo === 'gerente') {
-                                    $record->update(['status' => 'concluido']);
-                                }
+                    if ($user?->cargo === 'atendente') {
+                        if ($record->status === 'pendente')
+                         {
+                            $record->update(['status' => 'atendendo']);
+                        } 
+                        elseif ($record->status === 'atendendo')
+                         {
+                            $record->update(['status' => 'aprovacao']);
+                        }
+                    } 
+                    elseif ($user?->cargo === 'gerente')
+                     {
+                        $record->update(['status' => 'concluido']);
+                    }
 
-                                $livewire->dispatch('refresh');
+                    $livewire->dispatch('refresh');
 
-                                Notification::make()
-                                    ->title('Requisição atualizada')
-                                    ->body(match ($user?->cargo) {
-                                        'atendente' => "Atendimento salvo e enviado para o gerente.",
-                                        'gerente'   => "Requisição aprovada e marcada como concluída.",
-                                        default     => "Registro atualizado.",
-                                    })
-                                    ->icon('heroicon-o-check')
-                                    ->success()
-                                    ->sendToDatabase($user)
-                                    ->send();
+                    Notification::make()
+                        ->title('Requisição atualizada')
+                        ->body(match ($user?->cargo) {
+                            'atendente' => match ($record->status) {
+                                'atendendo' => 'Atendimento iniciado.',
+                                'aprovacao' => 'Atendimento concluído. Encaminhado para aprovação do gerente.',
+                                default     => 'Registro atualizado.',
+                            },
+                            'gerente' => 'Requisição aprovada com sucesso.',
+                            default   => 'Registro atualizado.',
+                        })
+                        ->icon('heroicon-o-check')
+                        ->success()
+                        ->sendToDatabase($user)
+                        ->send();
 
-                                return redirect(static::getUrl('index'));
-                            }),
+                    return redirect(static::getUrl('index'));
+                }),
 
-                        Tables\Actions\DeleteAction::make()
-                            ->label('Excluir')
-                            ->icon('heroicon-o-trash')
-                            ->requiresConfirmation()
-                            ->modalHeading('Excluir Usuário')
-                            ->modalDescription(fn($record) => "Tem certeza que deseja excluir {$record->name}?")
-                            ->modalSubmitActionLabel('Sim, excluir')
-                            ->successNotificationTitle(null)
-                            ->after(function ($record, $livewire) {
-                                Notification::make()
-                                    ->title('Unidade excluída')
-                                    ->body("A unidade {$record->name} foi deletada dos nossos registros.")
-                                    ->icon('heroicon-o-building-office')
-                                    ->danger()
-                                    ->sendToDatabase(Filament::auth()->user())
-                                    ->send();
+            Tables\Actions\Action::make('reprovar')
+                ->label('Reprovar')
+                ->icon('heroicon-o-x-circle')
+                ->color('danger')
+                ->visible(fn($record) => Filament::auth()->user()?->cargo === 'gerente' && $record->status === 'aprovacao')
+                ->action(function ($record) {
+                    $record->update(['status' => 'reprovado']);
 
-                                return redirect(static::getUrl('index'));
-                            }),
-                    ]),
+                    Notification::make()
+                        ->title('Requisição reprovada')
+                        ->body("A requisição {$record->name} foi reprovada.")
+                        ->icon('heroicon-o-x-circle')
+                        ->danger()
+                        ->sendToDatabase(Filament::auth()->user())
+                        ->send();
+
+                        return redirect(static::getUrl('index'));
+                }),
+
+            // DeleteAction
+            Tables\Actions\DeleteAction::make()
+                ->label('Excluir')
+                ->icon('heroicon-o-trash')
+                ->requiresConfirmation()
+                ->modalHeading('Excluir pedido?')
+                ->modalDescription(fn($record) => "Tem certeza que deseja excluir {$record->name}?")
+                ->modalSubmitActionLabel('Sim, excluir')
+                ->successNotificationTitle(null)
+                ->after(function ($record, $livewire) {
+                    Notification::make()
+                        ->title('Pedido excluído')
+                        ->body("A requisição {$record->name} foi deletada dos nossos registros.")
+                        ->icon('heroicon-o-trash')
+                        ->danger()
+                        ->sendToDatabase(Filament::auth()->user())
+                        ->send();
+
+                    return redirect(static::getUrl('index'));
+                }),
+        ]),
+
             ])
+
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
@@ -330,7 +375,7 @@ class RequisicoesResource extends Resource
         return [
             'index'  => Pages\ListRequisicoes::route('/'),
             'create' => Pages\CreateRequisicoes::route('/create'),
-            // edição feita via slideOver do EditAction
+
         ];
     }
 
@@ -340,9 +385,20 @@ class RequisicoesResource extends Resource
         $user  = Filament::auth()->user();
 
         return match ($user?->cargo) {
-            'atendente'   => $query->where('status', 'pendente'),
-            'gerente'     => $query->where('status', 'atendimento'),
-            default       => $query,
+            'atendente' => $query->whereIn('status', ['pendente', 'atendendo']),
+            'gerente'   => $query->where('status', 'aprovacao'),
+            default     => $query,
         };
+    }
+
+
+    public static function getModelLabel(): string
+    {
+        return 'Chamado';
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return 'Chamados';
     }
 }

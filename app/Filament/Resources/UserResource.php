@@ -7,6 +7,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Filament\Forms;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
@@ -23,44 +24,50 @@ class UserResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
 
+
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                TextInput::make('name')
-                    ->label('Nome')
-                    ->columnSpanFull()
-                    ->required()
+        return $form->schema([
 
-                    ->maxLength(255),
+            Section::make('Dados Pessoais')
+                ->description('Informações básicas do usuário')
+                ->columns(2)
+                ->schema([
+                    TextInput::make('name')
+                        ->label('Nome')
+                        ->required()
+                        ->maxLength(255),
 
-                TextInput::make('email')
-                    ->label('E-mail')
-                    ->email()
-                    ->columnSpanFull()
-                    ->required()
-                    ->maxLength(255),
+                    TextInput::make('email')
+                        ->label('E-mail')
+                        ->email()
+                        ->required()
+                        ->maxLength(255),
+                ]),
 
-                     TextInput::make('password')
-                    ->label('Senha')
-                    ->password()
-                    ->visible(fn($livewire) => $livewire instanceof \Filament\Resources\Pages\CreateRecord)
-                    ->required(fn($context) => $context === 'create')
-                    ->dehydrateStateUsing(fn($state) => bcrypt($state)),
+            Section::make('Credenciais de Acesso')
+                ->description('Defina a senha e o cargo do usuário')
+                ->columns(2)
+                ->schema([
+                    TextInput::make('password')
+                        ->label('Senha')
+                        ->password()
+                        ->visible(fn($livewire) => $livewire instanceof \Filament\Resources\Pages\CreateRecord)
+                        ->required(fn($context) => $context === 'create')
+                        ->dehydrateStateUsing(fn($state) => bcrypt($state)),
 
-                Select::make('cargo')
-                    ->label('Cargo')
-                    ->columnSpanFull()
-                    ->options([
-                        'administrador' => 'Administrador',
-                        'gerente' => 'Gerente',
-                        'funcionario' => 'Funcionário',
-                        'atendente' => 'atendente',
-                    ])
-                    ->required(),
-
-              
-            ]);
+                    Select::make('cargo')
+                        ->label('Cargo')
+                        ->options([
+                            'administrador' => 'Administrador',
+                            'gerente'       => 'Gerente',
+                            'funcionario'   => 'Funcionário',
+                            'atendente'     => 'Atendente',
+                            'relator'       => 'Relator',
+                        ])
+                        ->required(),
+                ]),
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -82,9 +89,10 @@ class UserResource extends Resource
                     ->badge()
                     ->colors([
                         'info' => 'gerente',
-                        'warning' => 'funcionario',
+                        'gray' => 'funcionario',
                         'success' => 'administrador',
-                        'primary' => 'atendente'
+                        'warning' => 'atendente',
+                        'primary' => 'relator',
                     ])
                     ->sortable(),
 
@@ -116,7 +124,6 @@ class UserResource extends Resource
                                     ->body("Informações do usuario {$record->name} foram editadas com sucesso.")
                                     ->icon('heroicon-o-user')
                                     ->success()
-                                    ->sendToDatabase(Filament::auth()->user())
                                     ->send();
 
                                 return redirect(static::getUrl('index'));
@@ -137,7 +144,6 @@ class UserResource extends Resource
                                     ->body("A conta {$record->name} foi deletada dos nossos registros.")
                                     ->icon('heroicon-o-user')
                                     ->danger()
-                                    ->sendToDatabase(Filament::auth()->user())
                                     ->send();
 
                                 return redirect(static::getUrl('index'));
@@ -169,5 +175,15 @@ class UserResource extends Resource
             'estatisticas' => Pages\EstatisticasUser::route('/{record}/estatisticas'),
 
         ];
+    }
+
+    public static function getModelLabel(): string
+    {
+        return 'Usuário';
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return 'Usuários';
     }
 }

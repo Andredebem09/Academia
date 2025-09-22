@@ -16,8 +16,9 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('unidade_id')->constrained('academias')->onDelete('cascade');
             $table->string('foto')->nullable();
-            $table->enum('status', ['pendente', 'em atendimento', 'aprovacao', 'concluido'])->default('pendente');
+            $table->enum('status', ['pendente', 'atender', 'atendendo', 'aprovacao', 'concluido', 'reprovado'])->default('pendente');
             $table->text('relato');
+            $table->text('nota_atendimento')->nullable();
             $table->boolean('emergencial')->default(false);
             $table->timestamps();
         });

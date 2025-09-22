@@ -6,6 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
 
 class User extends Authenticatable
 {
@@ -53,4 +55,11 @@ class User extends Authenticatable
         ? $record->load('requisicoes')
         : User::with('requisicoes')->findOrFail($record);
 }
+
+public function requisicoes(): HasMany
+{
+    return $this->hasMany(\App\Models\Requisicoes::class, 'user_id');
 }
+}
+
+

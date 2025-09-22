@@ -22,4 +22,14 @@ class CreateRequisicoes extends CreateRecord
         $data['user_id'] = Auth::id();
         return $data;
     }
+
+    protected function getFormActions(): array
+{
+    return [
+        $this->getCreateFormAction(),
+        $this->getCancelFormAction(), 
+    ];
+}
+
+
 }

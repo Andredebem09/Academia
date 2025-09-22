@@ -29,7 +29,7 @@ class RequisicoesPolicy
      */
     public function create(User $user): bool
     {
-        if($user->cargo === 'administrador' || $user->cargo === 'gerente'){
+        if($user->cargo === 'administrador' || $user->cargo === 'relator'){
             return true;
         }
         return false;
@@ -40,7 +40,7 @@ class RequisicoesPolicy
      */
     public function update(User $user, Requisicoes $requisicoes): bool
     {
-        if($user->cargo === 'administrador' || $user->cargo === 'atendente' || $user->cargo === 'gerente'){
+        if($user->cargo === 'administrador' || $user->cargo === 'atendente' || $user->cargo === 'gerente' || $user->cargo === 'relator'){
             return true;
         }
         return false;
@@ -51,7 +51,7 @@ class RequisicoesPolicy
      */
     public function delete(User $user, Requisicoes $requisicoes): bool
     {
-        if($user->cargo === 'administrador'){
+        if($user->cargo === 'administrador' || $user->cargo === 'relator'){
             return true;
         }
         return false;
