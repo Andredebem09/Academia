@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UnidadeResource\Pages;
+use App\Filament\Resources\UnidadeResource\Pages\LocalizacaoUnidade;
 use App\Models\Academia;
 use App\Models\User;
 use Carbon\Carbon;
@@ -17,6 +18,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Http;
+use Filament\Tables\Actions\Action;
+
 
 class UnidadeResource extends Resource
 {
@@ -92,13 +95,13 @@ class UnidadeResource extends Resource
             Section::make('Gerente da Unidade')
                 ->columns(1)
                 ->schema([
-                    MultiSelect::make('users')   
+                    MultiSelect::make('users')
                         ->label('Gestores')
-                        ->relationship(         
+                        ->relationship(
                             name: 'users',
                             titleAttribute: 'name',
                             modifyQueryUsing: fn($query) =>
-                            $query->where('cargo', 'gerente') 
+                            $query->where('cargo', 'gerente')
                         )
                         ->preload()
                         ->placeholder('Selecione os gestores')
@@ -183,6 +186,14 @@ class UnidadeResource extends Resource
                                 return redirect(static::getUrl('index'));
                             }),
                     ]),
+
+                Action::make('localizacao')
+                    ->label('Localização')
+                    ->icon('heroicon-o-map-pin')
+                    ->color('danger')
+                    ->openUrlInNewTab()
+                    ->url(fn($record) => UnidadeResource::getUrl('localizacao', ['record' => $record]))
+
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
@@ -199,6 +210,7 @@ class UnidadeResource extends Resource
         return [
             'index'  => Pages\ListUnidades::route('/'),
             'create' => Pages\CreateUnidade::route('/create'),
+            'localizacao' => Pages\LocalizacaoUnidade::route('/{record}/localizacao')
         ];
     }
 

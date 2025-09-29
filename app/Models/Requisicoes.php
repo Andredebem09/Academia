@@ -15,8 +15,21 @@ class Requisicoes extends Model
         'emergencial',
         'status',
         'nota_atendimento',
+        'nota_aprovacao',
         'gestor_id',
+        'aparelhos_id',
+        'prioridade',
+        'prazo_conclusao',
+        'custo_estimado',
+        'nota_cliente',
+        'assinatura_gerente',
     ];
+
+    protected $casts = [
+        'prazo_conclusao' => 'datetime',
+        'custo_estimado'  => 'decimal:2',
+    ];
+    
 
 
     public function user(): BelongsTo
@@ -33,5 +46,10 @@ class Requisicoes extends Model
 {
     return $this->belongsTo(User::class, 'gestor_id');
 }
+
+public function aparelho(): BelongsTo
+    {
+        return $this->belongsTo(Aparelho::class);
+    }
 
 }

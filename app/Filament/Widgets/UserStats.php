@@ -25,7 +25,7 @@ class UserStats extends BaseWidget
                     ->where('status', 'atendimento')
                     ->count();
 
-                $cards[] = Card::make('Requisições Atendidas', $total)
+                $cards[] = Card::make('Chamados Atendidas', $total)
                     ->description('Total de atendimentos realizados até hoje')
                     ->icon('heroicon-o-clipboard-document-check')
                     ->color('warning')
@@ -35,8 +35,8 @@ class UserStats extends BaseWidget
             case 'gerente':
                 $total = Requisicoes::where('status', 'concluido')->count();
 
-                $cards[] = Card::make('Requisições Aprovadas', $total)
-                    ->description('Total de requisições aprovadas até hoje')
+                $cards[] = Card::make('Chamados Aprovados', $total)
+                    ->description('Total de Chamados aprovadas até hoje')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->chart($this->lineData($user, 'concluido'));
@@ -45,9 +45,9 @@ class UserStats extends BaseWidget
             case 'administrador':
                 $total = Requisicoes::count();
 
-                $cards[] = Card::make('Requisições Totais', $total)
-                    ->description('Visão geral de todas as requisições')
-                    ->icon('heroicon-o-document-text')
+                $cards[] = Card::make('Chamados Totais', $total)
+                    ->description('Visão geral de todas os chamados')
+                    ->icon('heroicon-o-wrench-screwdriver')
                     ->color('primary')
                     ->chart($this->lineData($user));
                 break;

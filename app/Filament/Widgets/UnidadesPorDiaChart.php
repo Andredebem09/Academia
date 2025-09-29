@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 class PostsPerWeek extends ChartWidget
 {
-    protected static ?string $heading = 'Requisições nos últimos 7 dias';
-    protected static ?string $description = 'Veja quantas requisições foram realizadas nos últimos 7 dias.';
+    protected static ?string $heading = 'Chamados nos últimos 7 dias';
+    protected static ?string $description = 'Veja quantos Chamados foram realizadas nos últimos 7 dias.';
     protected static ?int $sort = 5;
 
     protected function getData(): array
@@ -37,7 +37,7 @@ class PostsPerWeek extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Requisições por dia',
+                    'label' => 'Chamados por dia',
                     'data' => $data,
                     'fill' => true,
                     'backgroundColor' => 'rgba(56,189,248,0.2)',
